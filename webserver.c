@@ -29,7 +29,7 @@ unsigned short htons(unsigned short hostshort) {
 }
 */
 
-#define PORT 8088
+#define PORT 8066
 
 void _start(){
     /* Create sock */
@@ -46,10 +46,6 @@ void _start(){
     int bind_res;
     asm_bind(bind_res, server_sock_fd, (struct sockaddr*)&server_addr, sizeof(server_addr));
 
-    if(bind_res != 0){
-        asm_exit();
-    }
-
     /* Listen for connections */
     asm_listen(server_sock_fd, 16);
 
@@ -57,34 +53,23 @@ void _start(){
         /* Accept new connection */
         int client_sock_fd;
         asm_accept(client_sock_fd, server_sock_fd);
-        if(client_sock_fd < 0){
-            asm_exit();
-        }
 
         /* Receive their request */
         int bytes_received = -1;
-        while(bytes_received != 0){
-            char recvbuf[256];
-            asm_recvfrom(bytes_received, client_sock_fd, recvbuf, 256, 0);
-            asm_write(1, recvbuf, 256);
+        char recvbuf[1024];
+        asm_recvfrom(bytes_received, client_sock_fd, recvbuf, 1024, 0);
 
-            /* Check if request is GET */
-            if(recvbuf[0] == 'G' && recvbuf[1] == 'E' && recvbuf[2] == 'T'){
+        /* Very bad GET check */
+        if(recvbuf[0] == 'G' && recvbuf[1] == 'E' && recvbuf[2] == 'T'){
+            /* reply with contents of index.html file */
+            int index_fd;
+            asm_open(index_fd, "index.html", O_RDONLY, 0644);
 
-                /* is GET, reply with contents of index.html file */
-                int index_fd;
-                asm_open(index_fd, "index.html", O_RDONLY, 0644);
+            char indexbuf[1024];
+            asm_read(index_fd, indexbuf, 1024);
 
-                char indexbuf[1024];
-                asm_read(index_fd, indexbuf, 1024);
-
-                int sendto_res;
-                asm_sendto(sendto_res, client_sock_fd, indexbuf, 1024, 0);
-
-                if(sendto_res <= 0){
-                    asm_exit();
-                }
-            }
+            int sendto_res;
+            asm_sendto(sendto_res, client_sock_fd, indexbuf, 1024, 0);
         }
 
         asm_close(client_sock_fd);
