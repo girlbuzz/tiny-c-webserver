@@ -41,7 +41,7 @@ void _start(){
         int client_sock_fd;
         asm_accept(client_sock_fd, server_sock_fd);
 
-        /* TODO - use fork to multithread */
+        /* TODO - use fork to multithread (maybe) */
 
         /* Receive their request */
         int bytes_received;
