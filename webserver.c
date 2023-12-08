@@ -96,7 +96,7 @@ void _start(){
             asm_open(prgm.file_fd, prgm.filename, O_RDONLY, 0644);
             /* Send 404 page if open fails - assuming the 404 file will always exist*/
             if(prgm.file_fd < 0){
-                asm_open(prgm.file_fd, "404", O_RDONLY, 0644);
+                asm_open(prgm.file_fd, "e", O_RDONLY, 0644);
             }
 
             /* Get file size */
