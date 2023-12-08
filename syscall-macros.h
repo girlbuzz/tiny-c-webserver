@@ -30,8 +30,8 @@
 ) // rax == 3 == close syscall // rdi == fd
 
 #define asm_brk(res, brk) asm volatile("syscall" \
-                                    : "=a" (res) \
-                                    : "0"(12), "D"(brk) \
+                                       : "=a" (res) \
+                                       : "a"(12),"D"(brk) \
 )
 
 #define asm_socket(sockfd, domain, type, protocol) asm volatile("syscall" \
