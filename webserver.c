@@ -11,12 +11,36 @@ struct sockaddr_in {
     char             sin_zero[8];  // zero this if you want to
 };
 
+/*
+    This is really not very portable, will likely break across different systems!
+*/
+struct stat{
+    unsigned long int st_dev;
+    unsigned long int st_ino;
+    unsigned long int st_nlink;
+    unsigned int st_mode;
+    unsigned int st_uid;
+    unsigned int st_gid;
+    int __pad0;
+    unsigned long int st_rdev;
+    long int st_size;
+    long int st_blksize;
+    long int st_blocks;
+    long int st_atime;
+    unsigned long int st_atimensec;
+    long int st_mtime;
+    unsigned long int st_mtimensec;
+    long int st_ctime;
+    unsigned long int st_ctimensec;
+    unsigned long int __glibc_reserved[3];
+};
+
 #define AF_INET     2	/* Internet IP Protocol 	*/
 #define SOCK_STREAM 1   /* stream (connection) socket	*/
 #define INADDR_ANY  0
 #define O_RDONLY    0
 
-#define PORT 8088
+#define PORT 8080
 
 void _start(){
     /* Create socket */
@@ -66,15 +90,27 @@ void _start(){
                 asm_open(file_fd, "404.html", O_RDONLY, 0644);
             }
 
-            /* Read file content - TODO use heap for large files */
-            char file_buf[1024];
-            int file_bytes_read;
-            asm_read(file_bytes_read, file_fd, file_buf, sizeof(file_buf));
+            /* Get file size */
+            struct stat stat_res;
+            asm_fstat(file_fd, &stat_res);
+
+            /* Allocate space for file on heap */
+            char* brk_start;
+            asm_brk(brk_start, 0);
+            char* brk_end;
+            asm_brk(brk_end, brk_start + (stat_res.st_size * sizeof(char)));
+
+            /* Read file into heap */
+            int file_bytes_read_total;
+            asm_read(file_bytes_read_total, file_fd, brk_start, stat_res.st_size);
             asm_close(file_fd);
 
-            /* Send the file content to the client */
+            /* Send the file content in heap to the client */
             int sendto_res;
-            asm_sendto(sendto_res, client_sock_fd, file_buf, file_bytes_read, 0);
+            asm_sendto(sendto_res, client_sock_fd, brk_start, file_bytes_read_total, 0);
+
+            /* Free heap memory */
+            asm_brk(brk_end, brk_start);
         }
 
         /* Close the socket */

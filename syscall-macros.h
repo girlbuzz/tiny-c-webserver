@@ -29,6 +29,11 @@
                                    :"a"(3), "D"(fd) \
 ) // rax == 3 == close syscall // rdi == fd
 
+#define asm_fstat(fd, statbuf) asm volatile("syscall" \
+                                            : \
+                                            :"a"(5),"D"(fd),"S"(statbuf) \
+)
+
 #define asm_brk(res, brk) asm volatile("syscall" \
                                        : "=a" (res) \
                                        : "a"(12),"D"(brk) \
