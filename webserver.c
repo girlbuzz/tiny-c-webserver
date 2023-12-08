@@ -12,9 +12,11 @@ struct sockaddr_in {
 };
 
 /*
-    This is really not very portable, will likely break across different systems!
+    The first section of this struct is used to capture the result of fstat
+    The second section is all the variables for the rest of the program
+    Saves like 48 bytes
 */
-struct stat{
+struct everything{
     unsigned long int st_dev;
     unsigned long int st_ino;
     unsigned long int st_nlink;
@@ -33,6 +35,21 @@ struct stat{
     long int st_ctime;
     unsigned long int st_ctimensec;
     unsigned long int __glibc_reserved[3];
+
+    int server_sock_fd;
+    struct sockaddr_in server_addr;
+    int bind_res;
+    int client_sock_fd;
+    int bytes_received;
+    char recvbuf[1024];
+    char filename[1024];
+    int fn_iter;
+    int file_fd;
+    char* brk_start;
+    char* brk_end;
+    int i;
+    int file_bytes_read;
+    int sendto_res;
 };
 
 #define AF_INET     2	/* Internet IP Protocol 	*/
@@ -40,86 +57,75 @@ struct stat{
 #define INADDR_ANY  0
 #define O_RDONLY    0
 
-#define PORT 8080
+#define PORT 8081
 
 void _start(){
+    struct everything prgm;
+
     /* Create socket */
-    int server_sock_fd;
-    asm_socket(server_sock_fd, AF_INET, SOCK_STREAM, 0);
+    asm_socket(prgm.server_sock_fd, AF_INET, SOCK_STREAM, 0);
     
     /* Config */
-    struct sockaddr_in server_addr;
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = ((PORT & 0xFF) << 8) | ((PORT & 0xFF00) >> 8); /* Swap the 1st and 2nd byte of port */
+    prgm.server_addr.sin_family = AF_INET;
+    prgm.server_addr.sin_addr.s_addr = INADDR_ANY;
+    prgm.server_addr.sin_port = ((PORT & 0xFF) << 8) | ((PORT & 0xFF00) >> 8); /* Swap the 1st and 2nd byte of port */
 
     /* Bind sock to port */
-    int bind_res; /* This gets optimised away */
-    asm_bind(bind_res, server_sock_fd, &server_addr, sizeof(server_addr));
+    asm_bind(prgm.bind_res, prgm.server_sock_fd, &prgm.server_addr, sizeof(prgm.server_addr));
 
     /* Listen for connections */
-    asm_listen(server_sock_fd, 16);
+    asm_listen(prgm.server_sock_fd, 16);
 
     while(1){
         /* Accept new connection */
-        int client_sock_fd;
-        asm_accept(client_sock_fd, server_sock_fd);
+        asm_accept(prgm.client_sock_fd, prgm.server_sock_fd);
 
         /* Receive their request */
-        int bytes_received;
-        char recvbuf[1024]; /* Everything past the first 1024 bytes is ignored*/
-        asm_recvfrom(bytes_received, client_sock_fd, recvbuf, 1024, 0);
+        asm_recvfrom(prgm.bytes_received, prgm.client_sock_fd, prgm.recvbuf, 1024, 0);
 
         /* Check if GET */
-        if (recvbuf[0] == 'G') { /* This is the most minimal way to possibly check, no other method starts with a 'G' so theres no need to check the rest of the chars. */
+        if (prgm.recvbuf[0] == 'G') { /* This is the most minimal way to possibly check, no other method starts with a 'G' so theres no need to check the rest of the chars. */
             /* Parse filename from request */
-            char filename[1024]; /* No point going bigger since recvbuf has a size of 1024 too */
-            int fn_iter = 5;
-            while(recvbuf[fn_iter] != ' ' && fn_iter < bytes_received){
-                filename[fn_iter - 5] = recvbuf[fn_iter++];
+            prgm.fn_iter = 5;
+            while(prgm.recvbuf[prgm.fn_iter] != ' ' && prgm.fn_iter < prgm.bytes_received){
+                prgm.filename[prgm.fn_iter - 5] = prgm.recvbuf[prgm.fn_iter++];
             }
-            filename[fn_iter - 5] = '\0';
+            prgm.filename[prgm.fn_iter - 5] = '\0';
 
             /* Open the file */
-            int file_fd;
-            asm_open(file_fd, filename, O_RDONLY, 0644);
+            asm_open(prgm.file_fd, prgm.filename, O_RDONLY, 0644);
             /* Send 404 page if open fails - assuming the 404 file will always exist*/
-            if(file_fd < 0){
-                asm_open(file_fd, "404", O_RDONLY, 0644);
+            if(prgm.file_fd < 0){
+                asm_open(prgm.file_fd, "404", O_RDONLY, 0644);
             }
 
             /* Get file size */
-            struct stat stat_res;
-            asm_fstat(file_fd, &stat_res);
+            asm_fstat(prgm.file_fd, &prgm);
 
             /* Allocate space for file on heap */
-            char* brk_start;
-            asm_brk(brk_start, 0);
-            char* brk_end;
-            asm_brk(brk_end, brk_start + (stat_res.st_size * sizeof(char)) + 18);
+            asm_brk(prgm.brk_start, 0);
+            asm_brk(prgm.brk_end, prgm.brk_start + (prgm.st_size * sizeof(char)) + 18);
 
             /* Write HTTP/1.1 200 OK into heap */
-            int i = 0;
-            while(i<18){
-                *(brk_start+i) = "HTTP/1.1 200 OK\n\n"[i++];
+            prgm.i = 0;
+            while(prgm.i<18){
+                *(prgm.brk_start+prgm.i) = "HTTP/1.1 200 OK\n\n"[prgm.i++];
             }
 
             /* Read file into heap */
-            int file_bytes_read;
-            asm_read(file_bytes_read, file_fd, brk_start+17, stat_res.st_size);
-            asm_close(file_fd);
+            asm_read(prgm.file_bytes_read, prgm.file_fd, prgm.brk_start+17, prgm.st_size);
+            asm_close(prgm.file_fd);
 
-            file_bytes_read += 18;
+            prgm.file_bytes_read += 18;
 
             /* Send the content in heap to the client */
-            int sendto_res;
-            asm_sendto(sendto_res, client_sock_fd, brk_start, file_bytes_read, 0);
+            asm_sendto(prgm.sendto_res, prgm.client_sock_fd, prgm.brk_start, prgm.file_bytes_read, 0);
 
             /* Free heap memory */
-            asm_brk(brk_end, brk_start);
+            asm_brk(prgm.brk_end, prgm.brk_start);
         }
 
         /* Close the socket */
-        asm_close(client_sock_fd);
+        asm_close(prgm.client_sock_fd);
     }
 }
