@@ -60,7 +60,7 @@ struct everything{
 #define PORT 8081
 
 void _start(){
-    struct everything prgm;
+    struct everything prgm; /* Hack to save a few bytes, read comment at struct definition */
 
     /* Create socket */
     asm_socket(prgm.server_sock_fd, AF_INET, SOCK_STREAM, 0);
