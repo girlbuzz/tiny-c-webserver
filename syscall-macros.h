@@ -8,10 +8,10 @@
     "d": %rdx
 */
 
-#define asm_read(fd, buf, size) asm volatile("xor %%rax, %%rax;" \
-                                             "syscall" \
-                                             : \
-                                             :"D"(fd),"S"(buf),"d"(size) \
+#define asm_read(bytes_read, fd, buf, size) asm volatile("xor %%rax, %%rax;" \
+                                                         "syscall" \
+                                                         :"=r"(bytes_read) \
+                                                         :"D"(fd),"S"(buf),"d"(size) \
 ) // rax == 0 == read syscall (we save a couple bytes using xor ;) ) // rdi == fd // rsi == buf ptr // rdx == buf size
 
 #define asm_write(fd, buf, size) asm volatile("syscall" \

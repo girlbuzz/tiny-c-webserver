@@ -11,25 +11,12 @@ struct sockaddr_in {
     char             sin_zero[8];  // zero this if you want to
 };
 
-#define AF_INET		2	/* Internet IP Protocol 	*/
-#define SOCK_STREAM	1   /* stream (connection) socket	*/
-#define	INADDR_ANY  ((unsigned long int) 0x00000000)
+#define AF_INET     2	/* Internet IP Protocol 	*/
+#define SOCK_STREAM 1   /* stream (connection) socket	*/
+#define INADDR_ANY  0
+#define O_RDONLY    0
 
-#define O_RDONLY 00000000
-
-/*
-unsigned short htons(unsigned short hostshort) {
-    // Check the endianness of the system
-    // If it's little-endian, swap the bytes
-    #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-        return ((hostshort & 0xFF) << 8) | ((hostshort & 0xFF00) >> 8);
-    #else
-        return hostshort;
-    #endif
-}
-*/
-
-#define PORT 8069
+#define PORT 8080
 
 void _start(){
     /* Create socket */
@@ -40,7 +27,7 @@ void _start(){
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = ((PORT & 0xFF) << 8) | ((PORT & 0xFF00) >> 8);
+    server_addr.sin_port = ((PORT & 0xFF) << 8) | ((PORT & 0xFF00) >> 8); /* Swap the 1st and 2nd byte of port */
 
     /* Bind sock to port */
     int bind_res;
@@ -54,27 +41,38 @@ void _start(){
         int client_sock_fd;
         asm_accept(client_sock_fd, server_sock_fd);
 
+        /* TODO - use fork to multithread */
+
         /* Receive their request */
         int bytes_received;
         char recvbuf[1024];
         asm_recvfrom(bytes_received, client_sock_fd, recvbuf, 1024, 0);
 
-        asm_write(1, recvbuf, bytes_received);
+        /* Check if GET */
+        if (recvbuf[0] == 'G' && recvbuf[1] == 'E' && recvbuf[2] == 'T') {
+            /* Parse filename from request */
+            char filename[1024]; /* 1024 should be enough, but 4096 would be 100% enough, as its the path size limit in linux */
+            int fn_iter;
+            for (fn_iter = 5; recvbuf[fn_iter] != ' ' && fn_iter < bytes_received; fn_iter++) {
+                filename[fn_iter - 5] = recvbuf[fn_iter];
+            }
+            filename[fn_iter - 5] = '\0'; // Null-terminate the filename
 
-        /* Check if GET req */
-        if(recvbuf[0] == 'G' && recvbuf[1] == 'E' && recvbuf[2] == 'T'){
-            /* Reply with index.html */
-            /* TODO - parse from req, get file at req location */
             int index_fd;
-            asm_open(index_fd, "index.html", O_RDONLY, 0644);
+            asm_open(index_fd, filename, O_RDONLY, 0644);
 
-            char indexbuf[1024];
-            asm_read(index_fd, indexbuf, 1024);
+            /* Read file content - TODO use heap for large files */
+            char file_buf[1024];
+            int file_bytes_read;
+            asm_read(file_bytes_read, index_fd, file_buf, sizeof(file_buf));
+            asm_close(index_fd);
 
+            /* Send the file content to the client */
             int sendto_res;
-            asm_sendto(sendto_res, client_sock_fd, indexbuf, 1024, 0);
+            asm_sendto(sendto_res, client_sock_fd, file_buf, file_bytes_read, 0);
         }
 
+        /* Close the socket */
         asm_close(client_sock_fd);
     }
 }
