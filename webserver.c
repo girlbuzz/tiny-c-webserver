@@ -16,7 +16,7 @@ struct sockaddr_in {
 #define INADDR_ANY  0
 #define O_RDONLY    0
 
-#define PORT 8080
+#define PORT 8088
 
 void _start(){
     /* Create socket */
@@ -58,14 +58,19 @@ void _start(){
             }
             filename[fn_iter - 5] = '\0'; // Null-terminate the filename
 
-            int index_fd;
-            asm_open(index_fd, filename, O_RDONLY, 0644);
+            /* Open the file */
+            int file_fd;
+            asm_open(file_fd, filename, O_RDONLY, 0644);
+            /* Send 404 page if open fails - assuming the 404.html file will always exist*/
+            if(file_fd < 0){
+                asm_open(file_fd, "404.html", O_RDONLY, 0644);
+            }
 
             /* Read file content - TODO use heap for large files */
             char file_buf[1024];
             int file_bytes_read;
-            asm_read(file_bytes_read, index_fd, file_buf, sizeof(file_buf));
-            asm_close(index_fd);
+            asm_read(file_bytes_read, file_fd, file_buf, sizeof(file_buf));
+            asm_close(file_fd);
 
             /* Send the file content to the client */
             int sendto_res;
