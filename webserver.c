@@ -32,18 +32,7 @@ unsigned short htons(unsigned short hostshort) {
 #define PORT 8069
 
 void _start(){
-
-    int* p;
-    asm_brk(p, 0);
-    int* end;
-    asm_brk(end, p+999999999);
-
-    for(int i=0; i<999999999; i++){
-        *p = 69;
-        p++;
-    }
-
-    /* Create sock */
+    /* Create socket */
     int server_sock_fd;
     asm_socket(server_sock_fd, AF_INET, SOCK_STREAM, 0);
     
@@ -74,11 +63,8 @@ void _start(){
 
         /* Check if GET req */
         if(recvbuf[0] == 'G' && recvbuf[1] == 'E' && recvbuf[2] == 'T'){
-            /* Parse the filepath from the req */
-            /* 4th byte to next whitespace byte */
-            int fp_end_idx = 4;
-            while(recvbuf[fp_end_idx++] != ' ');
-
+            /* Reply with index.html */
+            /* TODO - parse from req, get file at req location */
             int index_fd;
             asm_open(index_fd, "index.html", O_RDONLY, 0644);
 
