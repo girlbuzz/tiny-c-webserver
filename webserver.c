@@ -54,7 +54,7 @@ void _start(){
     server_addr.sin_port = ((PORT & 0xFF) << 8) | ((PORT & 0xFF00) >> 8); /* Swap the 1st and 2nd byte of port */
 
     /* Bind sock to port */
-    int bind_res;
+    int bind_res; /* This gets optimised away */
     asm_bind(bind_res, server_sock_fd, &server_addr, sizeof(server_addr));
 
     /* Listen for connections */
@@ -99,10 +99,9 @@ void _start(){
             asm_brk(brk_end, brk_start + (stat_res.st_size * sizeof(char)) + 18);
 
             /* Write HTTP/1.1 200 OK into heap */
-            const char* ok = "HTTP/1.1 200 OK\n\n";
             int i = 0;
             while(i<18){
-                *(brk_start+i) = ok[i++];
+                *(brk_start+i) = "HTTP/1.1 200 OK\n\n"[i++];
             }
 
             /* Read file into heap */
@@ -115,7 +114,7 @@ void _start(){
             /* Send the content in heap to the client */
             int sendto_res;
             asm_sendto(sendto_res, client_sock_fd, brk_start, file_bytes_read, 0);
-            
+
             /* Free heap memory */
             asm_brk(brk_end, brk_start);
         }
