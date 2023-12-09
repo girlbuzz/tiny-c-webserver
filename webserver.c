@@ -89,9 +89,9 @@ void _start(){
             do{
                 prgm.recvbufptr++;
             }while(*prgm.recvbufptr != ' ');
-            while(prgm.recvbufptr - (char*)&prgm.recvbuf < 1024){ /* Set the rest of the recvbuf to null terminator, so that it can be passed to open */
+            do{
                 *prgm.recvbufptr++ = '\0';
-            }
+            }while(prgm.recvbufptr - (char*)&prgm.recvbuf < 1023);
 
             /* Open the file */
             asm_open(prgm.file_fd, prgm.recvbuf+5, O_RDONLY, 0644);
