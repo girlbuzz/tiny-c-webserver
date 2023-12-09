@@ -111,7 +111,7 @@ void _start(){
             prgm.i = 0;
             while(prgm.i<18){
                 *(prgm.brk_start+prgm.i) = "HTTP/1.1 200 OK\n\n"[prgm.i++];
-            }
+            } /* Changing this to a do-while wont save any bytes */
 
             /* Read file into heap */
             asm_read(prgm.file_bytes_read, prgm.file_fd, prgm.brk_start+17, prgm.st_size);
