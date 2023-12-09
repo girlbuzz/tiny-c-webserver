@@ -42,8 +42,7 @@ struct everything{
     int client_sock_fd;
     int bytes_received;
     char recvbuf[1024];
-    char filename[1024];
-    int fn_iter;
+    char* recvbufptr;
     int file_fd;
     char* brk_start;
     char* brk_end;
@@ -57,7 +56,7 @@ struct everything{
 #define INADDR_ANY  0
 #define O_RDONLY    0
 
-#define PORT 8081
+#define PORT 8080
 
 void _start(){
     struct everything prgm; /* Hack to save a few bytes, read comment at struct definition */
@@ -86,14 +85,16 @@ void _start(){
         /* Check if GET */
         if (prgm.recvbuf[0] == 'G') { /* This is the most minimal way to possibly check, no other method starts with a 'G' so theres no need to check the rest of the chars. */
             /* Parse filename from request */
-            prgm.fn_iter = 5;
-            while(prgm.recvbuf[prgm.fn_iter] != ' ' && prgm.fn_iter < prgm.bytes_received){
-                prgm.filename[prgm.fn_iter - 5] = prgm.recvbuf[prgm.fn_iter++];
+            prgm.recvbufptr = (char*)&prgm.recvbuf + 5;
+            do{
+                prgm.recvbufptr++;
+            }while(*prgm.recvbufptr != ' ');
+            while(prgm.recvbufptr - (char*)&prgm.recvbuf < 1024){ /* Set the rest of the recvbuf to null terminator, so that it can be passed to open */
+                *prgm.recvbufptr++ = '\0';
             }
-            prgm.filename[prgm.fn_iter - 5] = '\0';
 
             /* Open the file */
-            asm_open(prgm.file_fd, prgm.filename, O_RDONLY, 0644);
+            asm_open(prgm.file_fd, prgm.recvbuf+5, O_RDONLY, 0644);
             /* Send 404 page if open fails - assuming the 404 file will always exist*/
             if(prgm.file_fd < 0){
                 asm_open(prgm.file_fd, "e", O_RDONLY, 0644);
