@@ -56,7 +56,7 @@ struct everything{
 #define INADDR_ANY  0
 #define O_RDONLY    0
 
-#define PORT 8080
+#define PORT 8081
 
 void _start(){
     struct everything prgm; /* Hack to save a few bytes, read comment at struct definition */
@@ -124,9 +124,11 @@ void _start(){
 
             /* Free heap memory */
             asm_brk(prgm.brk_end, prgm.brk_start);
+            
+            /* Close the socket 
+                Be cheeky and actually not close it to save some bytes? ;)
+            asm_close(prgm.client_sock_fd);
+            */
         }
-
-        /* Close the socket */
-        asm_close(prgm.client_sock_fd);
     }
 }
