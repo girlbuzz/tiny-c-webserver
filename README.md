@@ -6,6 +6,9 @@ This is achieved by:
 * Stripping the binary as much as possible
 * Doing plenty of other weird things
 
-## Issues:
-* Ctrl+C causes socket still open weird annoying cant bind port problem iushdfoihfgoiudfhgouihdsf but i dont really care
-* Never closes files or sockets, this is a (terrible) design choice to make it even smaller
+# How shitty is this webserver?
+It will crash after 1024 (i think) requests due to the open file limit.
+This is a high quality design choice to minimise filesize.
+
+It will also not properly close the listener socket, meaning you cannot properly restart it as it will fail to bind to the same port.
+This is also a high quality design choice to minimise filesize.
