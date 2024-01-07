@@ -115,7 +115,7 @@ void _start(){
 
             /* Read file into heap */
             asm_read(prgm.file_bytes_read, prgm.file_fd, prgm.brk_start+17, prgm.st_size);
-            asm_close(prgm.file_fd);
+            /* asm_close(prgm.file_fd); REAL MEN DONT CLOSE FILES HAHAHAHAHA */
 
             prgm.file_bytes_read += 18;
 

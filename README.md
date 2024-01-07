@@ -1,4 +1,4 @@
-# A webserver in an 820-byte ELF file
+# A webserver in an 804-byte ELF file
 This is achieved by:
 * Using the tiny C compiler
 * Compiling without the standard library, instead using inline assembly syscalls
