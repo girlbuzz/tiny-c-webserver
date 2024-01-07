@@ -8,3 +8,4 @@ This is achieved by:
 
 ## Issues:
 * Ctrl+C causes socket still open weird annoying cant bind port problem iushdfoihfgoiudfhgouihdsf but i dont really care
+* Never closes files or sockets, this is a (terrible) design choice to make it even smaller
