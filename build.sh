@@ -1,34 +1,18 @@
 #!/bin/sh
 
-#clean
-rm -f *.o webserver *-webserver
+for COMPILER in gcc clang tcc; do
+	CC=$COMPILER make clean webserver.o >/dev/null 2>&1
 
-#compile
-for i in tcc gcc clang; do
-	$i -c webserver.c -o $i-nostdinc-webserver.o
-done
+	for LINKER in gcc clang tcc ld.bfd ld.gold ld.lld mold; do
+		OUT="$COMPILER-nostinc-$LINKER-webserver"
 
-#link
-for i in tcc gcc clang; do
-	gcc -static -fwhole-program -nostartfiles -nostdlib $i-nostdinc-webserver.o -o $i-nostdinc-gcc-webserver
-	ld.bfd $i-nostdinc-webserver.o -o $i-nostdinc-bfd-webserver
-	ld.gold $i-nostdinc-webserver.o -o $i-nostdinc-gold-webserver
-	ld.lld $i-nostdinc-webserver.o -o $i-nostdinc-lld-webserver
-	mold $i-nostdinc-webserver.o -o $i-nostdinc-mold-webserver
-	tcc -static -nostdlib $i-nostdinc-webserver.o -o $i-nostdinc-tcc-webserver
-done
+		CC=$COMPILER LD=$LINKER LDFLAGS="-nostdinc -nostartfiles -s" OUT=$OUT make >/dev/null 2>&1
 
-#smaller
-for i in tcc gcc clang; do
-	for ii in gcc bfd gold lld mold tcc; do
-		strip --strip-all $i-nostdinc-$ii-webserver
-		objcopy --strip-section-headers $i-nostdinc-$ii-webserver
-	done
-done
-
-#size
-for i in tcc gcc clang; do
-	for ii in gcc bfd gold lld mold tcc; do
-		printf '%s %s\n' `stat --format=%s $i-nostdinc-$ii-webserver` nostdinc_${i}_${ii}
+		if [ $? -ne 0 ]; then
+			printf '\033[0;31mFailed\033[0m to compile %s\n' $OUT
+		else
+			SIZE=$(stat --format=%s $OUT)
+			printf 'Size of %s: %u bytes\n' "$OUT" "$SIZE"
+		fi
 	done
 done
